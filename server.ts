@@ -8,7 +8,7 @@ import { eq, desc } from "drizzle-orm";
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.use(express.json());
 
@@ -65,10 +65,10 @@ async function startServer() {
       const [newProduct] = await db.insert(products).values({
         name,
         description,
-        price,
+        price: Number(price),
         image_url,
-        weight,
-        stock,
+        unit: weight || '1 item',
+        in_stock: Number(stock) > 0,
         categoryId: Number(categoryId)
       }).returning();
       res.json(newProduct);
