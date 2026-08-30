@@ -118,8 +118,8 @@ export default function OrderTracking() {
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
         <h3 className="font-bold text-gray-900 text-sm mb-3">Order Details</h3>
         <div className="space-y-3">
-          {order.items?.map((item: any) => (
-            <div key={item.id} className="flex justify-between text-sm">
+          {order.items?.map((item: any, idx: number) => (
+            <div key={item.productId || idx} className="flex justify-between text-sm">
               <span className="text-gray-600 truncate max-w-[200px]">{item.quantity}x {item.product?.name || `Item #${item.productId}`}</span>
               <span className="font-medium text-gray-900 shrink-0 pl-2">₹{item.price_at_order * item.quantity}</span>
             </div>

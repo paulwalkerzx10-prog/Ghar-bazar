@@ -124,17 +124,8 @@ export default function Cart() {
         }))
       };
 
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-      
-      if (!res.ok) throw new Error('Failed to place order');
-      const order = await res.json();
+      const orderRef = await addDoc(collection(db, 'orders'), payload);
+      const order = { id: orderRef.id, ...payload };
       
       clearCart();
       navigate('/order-confirmation', { state: { order } });
