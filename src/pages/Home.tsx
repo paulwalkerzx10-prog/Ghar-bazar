@@ -4,10 +4,12 @@ import { Search, MapPin } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import ProductCard from '../components/ProductCard.tsx';
 import { useAuth } from '../context/AuthContext.tsx';
+import { collection, getDocs, query, orderBy, doc, getDoc, where } from 'firebase/firestore';
+import { db } from '../lib/firebase.ts';
 
 export default function Home() {
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { user } = useAuth();
   const [categories, setCategories] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [banners, setBanners] = useState<any[]>([]);
@@ -16,35 +18,34 @@ export default function Home() {
   const [address, setAddress] = useState<string | null>(null);
 
   useEffect(() => {
-    if (token) {
-      fetch('/api/profile', { headers: { Authorization: `Bearer ${token}` } })
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-          if (data && data.address) {
-            setAddress(data.address);
+    if (user) {
+      getDoc(doc(db, 'customers', user.uid))
+        .then(docSnap => {
+          if (docSnap.exists() && docSnap.data().address) {
+            setAddress(docSnap.data().address);
           }
         })
-        .catch(() => {});
+        .catch(console.error);
     }
-  }, [token]);
+  }, [user]);
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/categories').then(res => res.ok ? res.json() : []).catch(() => []),
-      fetch('/api/products').then(res => res.ok ? res.json() : []).catch(() => []),
-      fetch('/api/banners').then(res => res.ok ? res.json() : []).catch(() => [])
-    ]).then(([cats, prods, bans]) => {
-      setCategories(cats || []);
-      setProducts(prods || []);
-      setBanners(bans || []);
-      setLoading(false);
-    }).catch(err => {
-      
-      setCategories([]);
-      setProducts([]);
-      setBanners([]);
-      setLoading(false);
-    });
+    const fetchData = async () => {
+      try {
+        const catsSnap = await getDocs(query(collection(db, 'categories'), orderBy('display_order')));
+        const prodsSnap = await getDocs(collection(db, 'products'));
+        const bansSnap = await getDocs(query(collection(db, 'banners'), where('is_active', '==', true), orderBy('display_order')));
+
+        setCategories(catsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setProducts(prodsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setBanners(bansSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } catch (err) {
+        console.error("Error fetching data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
   const filteredProducts = products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));

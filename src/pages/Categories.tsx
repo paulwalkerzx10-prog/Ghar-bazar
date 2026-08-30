@@ -1,19 +1,26 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as Icons from 'lucide-react';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from '../lib/firebase.ts';
 
 export default function Categories() {
   const [categories, setCategories] = useState<any[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch('/api/categories')
-      .then(res => res.ok ? res.json() : [])
-      .then(data => setCategories(data || []))
-      .catch(err => {
-        
+    const fetchCategories = async () => {
+      try {
+        const q = query(collection(db, 'categories'), orderBy('display_order'));
+        const snapshot = await getDocs(q);
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setCategories(data);
+      } catch (err) {
+        console.error("Failed to fetch categories", err);
         setCategories([]);
-      });
+      }
+    };
+    fetchCategories();
   }, []);
 
   return (

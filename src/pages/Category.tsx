@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ProductCard from '../components/ProductCard.tsx';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '../lib/firebase.ts';
 
 export default function Category() {
   const navigate = useNavigate();
@@ -9,25 +11,27 @@ export default function Category() {
   const searchParams = new URLSearchParams(location.search);
   const categoryId = searchParams.get('id');
   const categoryName = searchParams.get('name');
-
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let url = '/api/products';
-    if (categoryId) url += `?category_id=${categoryId}`;
-    
-    fetch(url)
-      .then(res => res.ok ? res.json() : [])
-      .then(data => {
-        setProducts(data || []);
-        setLoading(false);
-      })
-      .catch(err => {
-        
+    const fetchProducts = async () => {
+      try {
+        let q = query(collection(db, 'products'));
+        if (categoryId) {
+          q = query(collection(db, 'products'), where('categoryId', 'in', [categoryId, Number(categoryId)]));
+        }
+        const snapshot = await getDocs(q);
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setProducts(data);
+      } catch (err) {
+        console.error("Failed to fetch products", err);
         setProducts([]);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+    fetchProducts();
   }, [categoryId]);
 
   return (

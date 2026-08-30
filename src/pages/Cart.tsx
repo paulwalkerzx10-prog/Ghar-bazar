@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore.ts';
 import { useAuth } from '../context/AuthContext.tsx';
+import { doc, getDoc, collection, addDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase.ts';
 import { Minus, Plus, Trash2, ArrowLeft, MapPin, Clock, User, Navigation } from 'lucide-react';
 
 export default function Cart() {
@@ -23,8 +25,8 @@ export default function Cart() {
 
   useEffect(() => {
     if (token) {
-      fetch('/api/profile', { headers: { Authorization: `Bearer ${token}` } })
-        .then(res => res.ok ? res.json() : null)
+      getDoc(doc(db, 'customers', user!.uid))
+        .then(snap => snap.exists() ? snap.data() : null)
         .then(data => {
           if (data) {
             if (data.name && !name) setName(data.name);
@@ -104,16 +106,21 @@ export default function Cart() {
       const finalAddress = wardNo.trim() ? `Ward No: ${wardNo.trim()} | ${address.trim()}` : address.trim();
 
       const payload = {
+        userId: user!.uid,
         customer_name: name,
         phone_number: phone,
         address: finalAddress,
         latitude,
         longitude,
         delivery_slot: slot,
-        items: items.map(i => ({
-          productId: i.id,
-          quantity: i.quantity,
-          price_at_order: i.price
+        status: 'Placed',
+        total_amount: itemTotal,
+        created_at: new Date().toISOString(),
+        items: items.map(item => ({
+          productId: item.id,
+          quantity: item.quantity,
+          price_at_order: item.price,
+          product: item // embed product data for easy display
         }))
       };
 

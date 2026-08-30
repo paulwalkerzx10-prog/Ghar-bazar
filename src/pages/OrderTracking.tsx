@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase.ts';
 
 const STAGES = ['Placed', 'Confirmed', 'Packed', 'Out for Delivery', 'Delivered'];
 
@@ -13,18 +15,21 @@ export default function OrderTracking() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
-      fetch(`/api/orders/${id}`, { headers: { Authorization: `Bearer ${token}` } })
-        .then(res => res.json())
-        .then(data => {
-          setOrder(data);
-          setLoading(false);
+    if (user && id) {
+      getDoc(doc(db, 'orders', id))
+        .then(docSnap => {
+          if (docSnap.exists() && docSnap.data().userId === user.uid) {
+            setOrder({ id: docSnap.id, ...docSnap.data() });
+          } else {
+            setOrder(null);
+          }
         })
-        .catch(() => setLoading(false));
+        .catch(console.error)
+        .finally(() => setLoading(false));
     } else if (!user && loading) {
         setLoading(false);
     }
-  }, [id, token, user, loading]);
+  }, [id, user, loading]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-green-600">Loading...</div>;
   

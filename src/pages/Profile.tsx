@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase.ts';
 import { User, LogOut, MapPin, Phone, Mail, Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
 import { useNavStore } from '../store/navStore.ts';
 
@@ -26,10 +28,10 @@ export default function Profile() {
 
   useEffect(() => {
     if (token) {
-      fetch('/api/profile', { headers: { Authorization: `Bearer ${token}` } })
-        .then(res => res.json())
-        .then(data => {
-          if (data) {
+      getDoc(doc(db, 'customers', user!.uid))
+        .then(docSnap => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
             setProfile(data);
             const savedAddrs = Array.isArray(data.addresses) ? data.addresses : [];
             const addrs = savedAddrs.length > 0 ? savedAddrs : (data.address ? [data.address] : []);
@@ -72,13 +74,10 @@ export default function Profile() {
     const payload = { ...form, address: finalAddress, addresses: validAddresses };
     
     try {
-      const res = await fetch('/api/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        const data = await res.json();
+      await setDoc(doc(db, 'customers', user!.uid), payload, { merge: true });
+      const docSnap = await getDoc(doc(db, 'customers', user!.uid));
+      if (docSnap.exists()) {
+        const data = docSnap.data();
         setProfile(data);
         setForm({
           name: data.name || '',
@@ -100,11 +99,7 @@ export default function Profile() {
     } else {
       setForm({ ...form, address: addr });
       try {
-        await fetch('/api/profile', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ ...form, address: addr })
-        });
+        await updateDoc(doc(db, 'customers', user!.uid), { address: addr });
         setProfile({ ...profile, address: addr });
       } catch (err) {}
     }

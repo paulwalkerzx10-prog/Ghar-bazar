@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Package, MapPin, ArrowLeft, Loader2, ArrowRight, User, ShoppingBag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase.ts';
 
 export default function Orders() {
   const { user, token, login, loginError } = useAuth();
@@ -12,15 +14,10 @@ export default function Orders() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/orders/history`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setOrders(Array.isArray(data) ? data : []);
-      } else {
-        setOrders([]);
-      }
+      const q = query(collection(db, 'orders'), where('userId', '==', user!.uid)); // Client-side sort to avoid index requirements
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setOrders(data);
     } catch (err) {
       console.error(err);
       setOrders([]);

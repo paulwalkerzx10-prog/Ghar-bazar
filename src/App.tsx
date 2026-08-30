@@ -13,11 +13,12 @@ import OrderConfirmation from './pages/OrderConfirmation.tsx';
 import Orders from './pages/Orders.tsx';
 import OrderTracking from './pages/OrderTracking.tsx';
 import Profile from './pages/Profile.tsx';
+import Admin from './pages/Admin.tsx';
 import BottomNav from './components/BottomNav.tsx';
 
 export default function App() {
   const location = useLocation();
-  const hideNavPaths = ['/profile/edit', '/order-confirmation'];
+  const hideNavPaths = ['/profile/edit', '/order-confirmation', '/admin'];
   const showNav = !hideNavPaths.some(path => location.pathname === path);
 
   return (
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/orders" element={<Orders />} />
           <Route path="/orders/:id" element={<OrderTracking />} />
           <Route path="/profile/*" element={<Profile />} />
+          <Route path="/admin" element={<Admin />} />
         </Routes>
         {showNav && <BottomNav />}
       </div>
