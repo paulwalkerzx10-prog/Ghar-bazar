@@ -41,32 +41,49 @@ export default function Admin() {
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, 'products'), {
+      const newProduct = {
         ...prodForm,
         price: Number(prodForm.price),
         stock: Number(prodForm.stock),
         unit: prodForm.weight || '1 item',
         in_stock: Number(prodForm.stock) > 0,
         categoryId: prodForm.categoryId // Keep as string or number based on how it's stored
-      });
+      };
+      const docRef = await addDoc(collection(db, 'products'), newProduct);
+      
+      // Optimistic update
+      setProducts(prev => [{ id: docRef.id, ...newProduct }, ...prev]);
       setProdForm({ name: '', description: '', price: '', stock: '', weight: '', categoryId: '', image_url: '' });
-      fetchData();
     } catch (err) { console.error(err); }
   };
 
   const handleDelete = async (collectionName: string, id: string) => {
     if (!confirm('Are you sure?')) return;
+    
+    // Optimistic update
+    if (collectionName === 'products') setProducts(prev => prev.filter(p => p.id !== id));
+    if (collectionName === 'categories') setCategories(prev => prev.filter(c => c.id !== id));
+    if (collectionName === 'banners') setBanners(prev => prev.filter(b => b.id !== id));
+    if (collectionName === 'orders') setOrders(prev => prev.filter(o => o.id !== id));
+
     try {
       await deleteDoc(doc(db, collectionName, id));
-      fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error(err); 
+      fetchData(); // revert on error
+    }
   };
 
   const handleUpdateOrderStatus = async (id: string, status: string) => {
+    // Optimistic update
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+    
     try {
       await updateDoc(doc(db, 'orders', id), { status });
-      fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error(err); 
+      fetchData(); // revert on error
+    }
   };
 
   return (
@@ -109,6 +126,35 @@ export default function Admin() {
                   <p className="font-bold">{p.name}</p>
                   <p className="text-sm">₹{p.price}</p>
                   <button onClick={() => handleDelete('products', p.id)} className="text-red-500 mt-2"><Trash2 size={16}/></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'categories' && (
+          <div>
+            <h2 className="text-2xl font-bold mb-6">Categories</h2>
+            <div className="grid grid-cols-4 gap-4">
+              {categories.map(c => (
+                <div key={c.id} className="bg-white p-4 rounded shadow-sm flex flex-col items-center">
+                  <img src={c.image_url} className="w-16 h-16 object-cover mb-2 rounded" />
+                  <p className="font-bold">{c.name}</p>
+                  <button onClick={() => handleDelete('categories', c.id)} className="text-red-500 mt-2"><Trash2 size={16}/></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'banners' && (
+          <div>
+            <h2 className="text-2xl font-bold mb-6">Banners</h2>
+            <div className="grid grid-cols-2 gap-4">
+              {banners.map(b => (
+                <div key={b.id} className="bg-white p-4 rounded shadow-sm flex flex-col items-center">
+                  <img src={b.image_url} className="w-full h-32 object-cover mb-2 rounded" />
+                  <button onClick={() => handleDelete('banners', b.id)} className="text-red-500 mt-2"><Trash2 size={16}/></button>
                 </div>
               ))}
             </div>
